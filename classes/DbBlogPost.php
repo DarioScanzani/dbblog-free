@@ -22,6 +22,7 @@ class DbBlogPost extends ObjectModel
     public $meta_description;
     public $date_add;
     public $date_upd;
+    public $publication_date;
 
     public static $definition = array(
         'table' => 'dbblog_post',
@@ -38,6 +39,7 @@ class DbBlogPost extends ObjectModel
             'index' =>			        array('type' => self::TYPE_BOOL, 'validate' => 'isBool'),
             'date_add' =>		        array('type' => self::TYPE_DATE),
             'date_upd' =>		        array('type' => self::TYPE_DATE),
+            'publication_date' =>	    array('type' => self::TYPE_DATE), 'validate' => 'isDate'),
             
             // Lang fields
             'short_desc' =>	        array('type' => self::TYPE_HTML, 'lang' => true, 'required' => false , 'validate' => 'isCleanHtml', 'size' => 4000),
@@ -258,6 +260,7 @@ class DbBlogPost extends ObjectModel
     public static function getPost($id_lang, $rewrite)
     {
         $id_shop = (int)Context::getContext()->shop->id;
+        $today = date('Y-m-d H:i:s');
         $sql = "SELECT p.*, pl.*, cl.title as title_category, cl.link_rewrite as link_category
             FROM "._DB_PREFIX_."dbblog_post p
             INNER JOIN  "._DB_PREFIX_."dbblog_post_lang pl 
@@ -266,7 +269,8 @@ class DbBlogPost extends ObjectModel
             INNER JOIN "._DB_PREFIX_."dbblog_category_lang cl 
                 ON p.id_dbblog_category = cl.id_dbblog_category
                     AND cl.id_lang = '$id_lang' AND cl.id_shop = '$id_shop'
-            WHERE p.active = 1 AND pl.link_rewrite = '$rewrite'";
+            WHERE p.active = 1 AND p.link_rewrite = '$rewrite'
+                    AND (p.publication_date IS NULL OR p.publication_date <= '$today')";
         $result = Db::getInstance(_PS_USE_SQL_SLAVE_)->getRow($sql);
 
         $post = array();
@@ -288,6 +292,7 @@ class DbBlogPost extends ObjectModel
         $post['views'] = (int)$result['views'] + 1;
         $post['date_add'] = date_format(date_create($result['date_add']), 'd/m/Y');
         $post['date_upd'] = date_format(date_create($result['date_upd']), 'd/m/Y');
+        $post['publication_date'] = date_format(date_create($result['publication_date']), 'd/m/Y');
         $post['date_add_json'] = $result['date_add'];
         $post['date_upd_json'] = $result['date_upd'];
         $post['title_category'] = $result['title_category'];
